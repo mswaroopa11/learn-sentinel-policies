@@ -1,0 +1,45 @@
+id = "run-o9eroxiiCp7D5MK6"
+created_at = "2020-12-13T18:20:02.534Z"
+message = "Queued manually using Terraform"
+commit_sha = undefined
+speculative = true
+is_destroy = false
+target_addrs = null
+
+variables = {
+	"AWS_ACCESS_KEY_ID": {
+		"category":  "env",
+		"sensitive": true,
+	},
+	"AWS_SECRET_ACCESS_KEY": {
+		"category":  "env",
+		"sensitive": true,
+	},
+	"prefix": {
+		"category":  "terraform",
+		"sensitive": false,
+	},
+	"region": {
+		"category":  "terraform",
+		"sensitive": false,
+	},
+}
+
+organization = {
+	"name": "scg-inc",
+}
+
+workspace = {
+	"auto_apply":  false,
+	"created_at":  "2020-12-12T19:24:38.335Z",
+	"description": null,
+	"id":          "ws-tq3Jd5tbFVGyu8Vx",
+	"name":        "learn-sentinel-tfc",
+	"vcs_repo": {
+		"branch":             "",
+		"display_identifier": "mswaroopa11/learn-sentinel-tfc",
+		"identifier":         "mswaroopa11/learn-sentinel-tfc",
+		"ingress_submodules": false,
+	},
+	"working_directory": "",
+}

@@ -1,0 +1,619 @@
+terraform_version = "0.14.2"
+
+planned_values = {
+	"outputs": {
+		"dev_website_endpoint": {
+			"name":      "dev_website_endpoint",
+			"sensitive": false,
+			"value":     undefined,
+		},
+	},
+	"resources": {
+		"aws_s3_bucket.demo": {
+			"address":        "aws_s3_bucket.demo",
+			"depends_on":     [],
+			"deposed_key":    "",
+			"index":          null,
+			"mode":           "managed",
+			"module_address": "",
+			"name":           "demo",
+			"provider_name":  "registry.terraform.io/hashicorp/aws",
+			"tainted":        false,
+			"type":           "aws_s3_bucket",
+			"values": {
+				"acl":                                  "public-read",
+				"bucket_prefix":                        null,
+				"cors_rule":                            [],
+				"force_destroy":                        true,
+				"grant":                                [],
+				"lifecycle_rule":                       [],
+				"logging":                              [],
+				"object_lock_configuration":            [],
+				"replication_configuration":            [],
+				"server_side_encryption_configuration": [],
+				"tags": {
+					"Environment": "Learn",
+					"Name":        "HashiCorp",
+				},
+				"website": [
+					{
+						"error_document":           "error.html",
+						"index_document":           "index.html",
+						"redirect_all_requests_to": null,
+						"routing_rules":            null,
+					},
+				],
+			},
+		},
+		"aws_s3_bucket_object.demo": {
+			"address":        "aws_s3_bucket_object.demo",
+			"depends_on":     [],
+			"deposed_key":    "",
+			"index":          null,
+			"mode":           "managed",
+			"module_address": "",
+			"name":           "demo",
+			"provider_name":  "registry.terraform.io/hashicorp/aws",
+			"tainted":        false,
+			"type":           "aws_s3_bucket_object",
+			"values": {
+				"acl":                           "public-read",
+				"cache_control":                 null,
+				"content":                       "<!DOCTYPE html>\r\n<html>\r\n  <head>\r\n    <title>Terramino</title>\r\n    <style>\r\n      html,\r\n      body {\r\n        height: 100%;\r\n        margin: 0;\r\n      }\r\n\r\n      body {\r\n\r\n        background-image: url(\"https://raw.githubusercontent.com/hashicorp/learn-terraform-circleci/master/assets/background.png\");\r\n        display: flex;\r\n        align-items: center;\r\n        justify-content: center;\r\n      }\r\n\r\n      canvas {\r\n        border: 1px solid white;\r\n      }\r\n    </style>\r\n  </head>\r\n\r\n  <body>\r\n    <canvas width=\"320\" height=\"640\" id=\"game\"></canvas>\r\n    <script>\r\n      // https://tetris.fandom.com/wiki/Tetris_Guideline\r\n\r\n      // get a random integer between the range of [min,max]\r\n      // @see https://stackoverflow.com/a/1527820/2124254\r\n      function getRandomInt(min, max) {\r\n        min = Math.ceil(min);\r\n        max = Math.floor(max);\r\n\r\n        return Math.floor(Math.random() * (max - min + 1)) + min;\r\n      }\r\n\r\n      // generate a new tetromino sequence\r\n      // @see https://tetris.fandom.com/wiki/Random_Generator\r\n      function generateSequence() {\r\n        const sequence = [\"I\", \"J\", \"L\", \"O\", \"S\", \"T\", \"Z\"];\r\n\r\n        while (sequence.length) {\r\n          const rand = getRandomInt(0, sequence.length - 1);\r\n          const name = sequence.splice(rand, 1)[0];\r\n          tetrominoSequence.push(name);\r\n        }\r\n      }\r\n\r\n      // get the next tetromino in the sequence\r\n      function getNextTetromino() {\r\n        if (tetrominoSequence.length === 0) {\r\n          generateSequence();\r\n        }\r\n\r\n        const name = tetrominoSequence.pop();\r\n        const matrix = tetrominos[name];\r\n\r\n        // I and O start centered, all others start in left-middle\r\n        const col = playfield[0].length / 2 - Math.ceil(matrix[0].length / 2);\r\n\r\n        // I starts on row 21 (-1), all others start on row 22 (-2)\r\n        const row = name === \"I\" ? -1 : -2;\r\n\r\n        return {\r\n          name: name, // name of the piece (L, O, etc.)\r\n          matrix: matrix, // the current rotation matrix\r\n          row: row, // current row (starts offscreen)\r\n          col: col // current col\r\n        };\r\n      }\r\n\r\n      // rotate an NxN matrix 90deg\r\n      // @see https://codereview.stackexchange.com/a/186834\r\n      function rotate(matrix) {\r\n        const N = matrix.length - 1;\r\n        const result = matrix.map((row, i) =>\r\n          row.map((val, j) => matrix[N - j][i])\r\n        );\r\n\r\n        return result;\r\n      }\r\n\r\n      // check to see if the new matrix/row/col is valid\r\n      function isValidMove(matrix, cellRow, cellCol) {\r\n        for (let row = 0; row < matrix.length; row++) {\r\n          for (let col = 0; col < matrix[row].length; col++) {\r\n            if (\r\n              matrix[row][col] &&\r\n              // outside the game bounds\r\n              (cellCol + col < 0 ||\r\n                cellCol + col >= playfield[0].length ||\r\n                cellRow + row >= playfield.length ||\r\n                // collides with another piece\r\n                playfield[cellRow + row][cellCol + col])\r\n            ) {\r\n              return false;\r\n            }\r\n          }\r\n        }\r\n\r\n        return true;\r\n      }\r\n\r\n      // place the tetromino on the playfield\r\n      function placeTetromino() {\r\n        for (let row = 0; row < tetromino.matrix.length; row++) {\r\n          for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n            if (tetromino.matrix[row][col]) {\r\n              // game over if piece has any part offscreen\r\n              if (tetromino.row + row < 0) {\r\n                return showGameOver();\r\n              }\r\n\r\n              playfield[tetromino.row + row][tetromino.col + col] =\r\n                tetromino.name;\r\n            }\r\n          }\r\n        }\r\n\r\n        // check for line clears starting from the bottom and working our way up\r\n        for (let row = playfield.length - 1; row >= 0; ) {\r\n          if (playfield[row].every(cell => !!cell)) {\r\n            // drop every row above this one\r\n            for (let r = row; r >= 0; r--) {\r\n              playfield[r] = playfield[r - 1];\r\n            }\r\n          } else {\r\n            row--;\r\n          }\r\n        }\r\n\r\n        tetromino = getNextTetromino();\r\n      }\r\n\r\n      // show the game over screen\r\n      function showGameOver() {\r\n        cancelAnimationFrame(rAF);\r\n        gameOver = true;\r\n\r\n        context.fillStyle = \"black\";\r\n        context.globalAlpha = 0.75;\r\n        context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);\r\n\r\n        context.globalAlpha = 1;\r\n        context.fillStyle = \"white\";\r\n        context.font = \"36px monospace\";\r\n        context.textAlign = \"center\";\r\n        context.textBaseline = \"middle\";\r\n        context.fillText(\"GAME OVER!\", canvas.width / 2, canvas.height / 2);\r\n      }\r\n\r\n      const canvas = document.getElementById(\"game\");\r\n      const context = canvas.getContext(\"2d\");\r\n      const grid = 32;\r\n      const tetrominoSequence = [];\r\n\r\n      // keep track of what is in every cell of the game using a 2d array\r\n      // tetris playfield is 10x20, with a few rows offscreen\r\n      const playfield = [];\r\n\r\n      // populate the empty state\r\n      for (let row = -2; row < 20; row++) {\r\n        playfield[row] = [];\r\n\r\n        for (let col = 0; col < 10; col++) {\r\n          playfield[row][col] = 0;\r\n        }\r\n      }\r\n\r\n      // how to draw each tetromino\r\n      // @see https://tetris.fandom.com/wiki/SRS\r\n      const tetrominos = {\r\n        I: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],\r\n        J: [[1, 0, 0], [1, 1, 1], [0, 0, 0]],\r\n        L: [[0, 0, 1], [1, 1, 1], [0, 0, 0]],\r\n        O: [[1, 1], [1, 1]],\r\n        S: [[0, 1, 1], [1, 1, 0], [0, 0, 0]],\r\n        Z: [[1, 1, 0], [0, 1, 1], [0, 0, 0]],\r\n        T: [[0, 1, 0], [1, 1, 1], [0, 0, 0]]\r\n      };\r\n\r\n      // color of each tetromino\r\n      const colors = {\r\n        I: \"#623CE4\",\r\n        O: \"#7C8797\",\r\n        T: \"#00BC7F\",\r\n        S: \"#CA2171\",\r\n        Z: \"#1563ff\",\r\n        J: \"#00ACFF\",\r\n        L: \"white\"\r\n      };\r\n\r\n      let count = 0;\r\n      let tetromino = getNextTetromino();\r\n      let rAF = null; // keep track of the animation frame so we can cancel it\r\n      let gameOver = false;\r\n\r\n      // game loop\r\n      function loop() {\r\n        rAF = requestAnimationFrame(loop);\r\n        context.clearRect(0, 0, canvas.width, canvas.height);\r\n\r\n        // draw the playfield\r\n        for (let row = 0; row < 20; row++) {\r\n          for (let col = 0; col < 10; col++) {\r\n            if (playfield[row][col]) {\r\n              const name = playfield[row][col];\r\n              context.fillStyle = colors[name];\r\n\r\n              // drawing 1 px smaller than the grid creates a grid effect\r\n              context.fillRect(col * grid, row * grid, grid - 1, grid - 1);\r\n            }\r\n          }\r\n        }\r\n\r\n        // draw the active tetromino\r\n        if (tetromino) {\r\n          // tetromino falls every 35 frames\r\n          if (++count > 35) {\r\n            tetromino.row++;\r\n            count = 0;\r\n\r\n            // place piece if it runs into anything\r\n            if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {\r\n              tetromino.row--;\r\n              placeTetromino();\r\n            }\r\n          }\r\n\r\n          context.fillStyle = colors[tetromino.name];\r\n\r\n          for (let row = 0; row < tetromino.matrix.length; row++) {\r\n            for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n              if (tetromino.matrix[row][col]) {\r\n                // drawing 1 px smaller than the grid creates a grid effect\r\n                context.fillRect(\r\n                  (tetromino.col + col) * grid,\r\n                  (tetromino.row + row) * grid,\r\n                  grid - 1,\r\n                  grid - 1\r\n                );\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n\r\n      // listen to keyboard events to move the active tetromino\r\n      document.addEventListener(\"keydown\", function(e) {\r\n        if (gameOver) return;\r\n\r\n        // left and right arrow keys (move)\r\n        if (e.which === 37 || e.which === 39) {\r\n          const col = e.which === 37 ? tetromino.col - 1 : tetromino.col + 1;\r\n\r\n          if (isValidMove(tetromino.matrix, tetromino.row, col)) {\r\n            tetromino.col = col;\r\n          }\r\n        }\r\n\r\n        // up arrow key (rotate)\r\n        if (e.which === 38) {\r\n          const matrix = rotate(tetromino.matrix);\r\n          if (isValidMove(matrix, tetromino.row, tetromino.col)) {\r\n            tetromino.matrix = matrix;\r\n          }\r\n        }\r\n\r\n        // down arrow key (drop)\r\n        if (e.which === 40) {\r\n          const row = tetromino.row + 1;\r\n\r\n          if (!isValidMove(tetromino.matrix, row, tetromino.col)) {\r\n            tetromino.row = row - 1;\r\n\r\n            placeTetromino();\r\n            return;\r\n          }\r\n\r\n          tetromino.row = row;\r\n        }\r\n      });\r\n\r\n      // start the game\r\n      rAF = requestAnimationFrame(loop);\r\n    </script>\r\n  </body>\r\n</html>\r\n",
+				"content_base64":                null,
+				"content_disposition":           null,
+				"content_encoding":              null,
+				"content_language":              null,
+				"content_type":                  "text/html",
+				"force_destroy":                 false,
+				"key":                           "index.html",
+				"metadata":                      null,
+				"object_lock_legal_hold_status": null,
+				"object_lock_mode":              null,
+				"object_lock_retain_until_date": null,
+				"source":                        null,
+				"tags":                          null,
+				"website_redirect":              null,
+			},
+		},
+		"random_pet.petname": {
+			"address":        "random_pet.petname",
+			"depends_on":     [],
+			"deposed_key":    "",
+			"index":          null,
+			"mode":           "managed",
+			"module_address": "",
+			"name":           "petname",
+			"provider_name":  "registry.terraform.io/hashicorp/random",
+			"tainted":        false,
+			"type":           "random_pet",
+			"values": {
+				"keepers":   null,
+				"length":    3,
+				"prefix":    null,
+				"separator": "-",
+			},
+		},
+	},
+}
+
+variables = {
+	"prefix": {
+		"name":  "prefix",
+		"value": "demo",
+	},
+	"region": {
+		"name":  "region",
+		"value": "us-east-1",
+	},
+}
+
+resource_changes = {
+	"aws_s3_bucket.demo": {
+		"address": "aws_s3_bucket.demo",
+		"change": {
+			"actions": [
+				"create",
+			],
+			"after": {
+				"acl":                                  "public-read",
+				"bucket_prefix":                        null,
+				"cors_rule":                            [],
+				"force_destroy":                        true,
+				"grant":                                [],
+				"lifecycle_rule":                       [],
+				"logging":                              [],
+				"object_lock_configuration":            [],
+				"replication_configuration":            [],
+				"server_side_encryption_configuration": [],
+				"tags": {
+					"Environment": "Learn",
+					"Name":        "HashiCorp",
+				},
+				"website": [
+					{
+						"error_document":           "error.html",
+						"index_document":           "index.html",
+						"redirect_all_requests_to": null,
+						"routing_rules":            null,
+					},
+				],
+			},
+			"after_unknown": {
+				"acceleration_status": true,
+				"arn":                                  true,
+				"bucket":                               true,
+				"bucket_domain_name":                   true,
+				"bucket_regional_domain_name":          true,
+				"cors_rule":                            [],
+				"grant":                                [],
+				"hosted_zone_id":                       true,
+				"id":                                   true,
+				"lifecycle_rule":                       [],
+				"logging":                              [],
+				"object_lock_configuration":            [],
+				"policy":                               true,
+				"region":                               true,
+				"replication_configuration":            [],
+				"request_payer":                        true,
+				"server_side_encryption_configuration": [],
+				"tags":       {},
+				"versioning": true,
+				"website": [
+					{},
+				],
+				"website_domain":   true,
+				"website_endpoint": true,
+			},
+			"before": null,
+		},
+		"deposed":        "",
+		"index":          null,
+		"mode":           "managed",
+		"module_address": "",
+		"name":           "demo",
+		"provider_name":  "registry.terraform.io/hashicorp/aws",
+		"type":           "aws_s3_bucket",
+	},
+	"aws_s3_bucket_object.demo": {
+		"address": "aws_s3_bucket_object.demo",
+		"change": {
+			"actions": [
+				"create",
+			],
+			"after": {
+				"acl":                           "public-read",
+				"cache_control":                 null,
+				"content":                       "<!DOCTYPE html>\r\n<html>\r\n  <head>\r\n    <title>Terramino</title>\r\n    <style>\r\n      html,\r\n      body {\r\n        height: 100%;\r\n        margin: 0;\r\n      }\r\n\r\n      body {\r\n\r\n        background-image: url(\"https://raw.githubusercontent.com/hashicorp/learn-terraform-circleci/master/assets/background.png\");\r\n        display: flex;\r\n        align-items: center;\r\n        justify-content: center;\r\n      }\r\n\r\n      canvas {\r\n        border: 1px solid white;\r\n      }\r\n    </style>\r\n  </head>\r\n\r\n  <body>\r\n    <canvas width=\"320\" height=\"640\" id=\"game\"></canvas>\r\n    <script>\r\n      // https://tetris.fandom.com/wiki/Tetris_Guideline\r\n\r\n      // get a random integer between the range of [min,max]\r\n      // @see https://stackoverflow.com/a/1527820/2124254\r\n      function getRandomInt(min, max) {\r\n        min = Math.ceil(min);\r\n        max = Math.floor(max);\r\n\r\n        return Math.floor(Math.random() * (max - min + 1)) + min;\r\n      }\r\n\r\n      // generate a new tetromino sequence\r\n      // @see https://tetris.fandom.com/wiki/Random_Generator\r\n      function generateSequence() {\r\n        const sequence = [\"I\", \"J\", \"L\", \"O\", \"S\", \"T\", \"Z\"];\r\n\r\n        while (sequence.length) {\r\n          const rand = getRandomInt(0, sequence.length - 1);\r\n          const name = sequence.splice(rand, 1)[0];\r\n          tetrominoSequence.push(name);\r\n        }\r\n      }\r\n\r\n      // get the next tetromino in the sequence\r\n      function getNextTetromino() {\r\n        if (tetrominoSequence.length === 0) {\r\n          generateSequence();\r\n        }\r\n\r\n        const name = tetrominoSequence.pop();\r\n        const matrix = tetrominos[name];\r\n\r\n        // I and O start centered, all others start in left-middle\r\n        const col = playfield[0].length / 2 - Math.ceil(matrix[0].length / 2);\r\n\r\n        // I starts on row 21 (-1), all others start on row 22 (-2)\r\n        const row = name === \"I\" ? -1 : -2;\r\n\r\n        return {\r\n          name: name, // name of the piece (L, O, etc.)\r\n          matrix: matrix, // the current rotation matrix\r\n          row: row, // current row (starts offscreen)\r\n          col: col // current col\r\n        };\r\n      }\r\n\r\n      // rotate an NxN matrix 90deg\r\n      // @see https://codereview.stackexchange.com/a/186834\r\n      function rotate(matrix) {\r\n        const N = matrix.length - 1;\r\n        const result = matrix.map((row, i) =>\r\n          row.map((val, j) => matrix[N - j][i])\r\n        );\r\n\r\n        return result;\r\n      }\r\n\r\n      // check to see if the new matrix/row/col is valid\r\n      function isValidMove(matrix, cellRow, cellCol) {\r\n        for (let row = 0; row < matrix.length; row++) {\r\n          for (let col = 0; col < matrix[row].length; col++) {\r\n            if (\r\n              matrix[row][col] &&\r\n              // outside the game bounds\r\n              (cellCol + col < 0 ||\r\n                cellCol + col >= playfield[0].length ||\r\n                cellRow + row >= playfield.length ||\r\n                // collides with another piece\r\n                playfield[cellRow + row][cellCol + col])\r\n            ) {\r\n              return false;\r\n            }\r\n          }\r\n        }\r\n\r\n        return true;\r\n      }\r\n\r\n      // place the tetromino on the playfield\r\n      function placeTetromino() {\r\n        for (let row = 0; row < tetromino.matrix.length; row++) {\r\n          for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n            if (tetromino.matrix[row][col]) {\r\n              // game over if piece has any part offscreen\r\n              if (tetromino.row + row < 0) {\r\n                return showGameOver();\r\n              }\r\n\r\n              playfield[tetromino.row + row][tetromino.col + col] =\r\n                tetromino.name;\r\n            }\r\n          }\r\n        }\r\n\r\n        // check for line clears starting from the bottom and working our way up\r\n        for (let row = playfield.length - 1; row >= 0; ) {\r\n          if (playfield[row].every(cell => !!cell)) {\r\n            // drop every row above this one\r\n            for (let r = row; r >= 0; r--) {\r\n              playfield[r] = playfield[r - 1];\r\n            }\r\n          } else {\r\n            row--;\r\n          }\r\n        }\r\n\r\n        tetromino = getNextTetromino();\r\n      }\r\n\r\n      // show the game over screen\r\n      function showGameOver() {\r\n        cancelAnimationFrame(rAF);\r\n        gameOver = true;\r\n\r\n        context.fillStyle = \"black\";\r\n        context.globalAlpha = 0.75;\r\n        context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);\r\n\r\n        context.globalAlpha = 1;\r\n        context.fillStyle = \"white\";\r\n        context.font = \"36px monospace\";\r\n        context.textAlign = \"center\";\r\n        context.textBaseline = \"middle\";\r\n        context.fillText(\"GAME OVER!\", canvas.width / 2, canvas.height / 2);\r\n      }\r\n\r\n      const canvas = document.getElementById(\"game\");\r\n      const context = canvas.getContext(\"2d\");\r\n      const grid = 32;\r\n      const tetrominoSequence = [];\r\n\r\n      // keep track of what is in every cell of the game using a 2d array\r\n      // tetris playfield is 10x20, with a few rows offscreen\r\n      const playfield = [];\r\n\r\n      // populate the empty state\r\n      for (let row = -2; row < 20; row++) {\r\n        playfield[row] = [];\r\n\r\n        for (let col = 0; col < 10; col++) {\r\n          playfield[row][col] = 0;\r\n        }\r\n      }\r\n\r\n      // how to draw each tetromino\r\n      // @see https://tetris.fandom.com/wiki/SRS\r\n      const tetrominos = {\r\n        I: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],\r\n        J: [[1, 0, 0], [1, 1, 1], [0, 0, 0]],\r\n        L: [[0, 0, 1], [1, 1, 1], [0, 0, 0]],\r\n        O: [[1, 1], [1, 1]],\r\n        S: [[0, 1, 1], [1, 1, 0], [0, 0, 0]],\r\n        Z: [[1, 1, 0], [0, 1, 1], [0, 0, 0]],\r\n        T: [[0, 1, 0], [1, 1, 1], [0, 0, 0]]\r\n      };\r\n\r\n      // color of each tetromino\r\n      const colors = {\r\n        I: \"#623CE4\",\r\n        O: \"#7C8797\",\r\n        T: \"#00BC7F\",\r\n        S: \"#CA2171\",\r\n        Z: \"#1563ff\",\r\n        J: \"#00ACFF\",\r\n        L: \"white\"\r\n      };\r\n\r\n      let count = 0;\r\n      let tetromino = getNextTetromino();\r\n      let rAF = null; // keep track of the animation frame so we can cancel it\r\n      let gameOver = false;\r\n\r\n      // game loop\r\n      function loop() {\r\n        rAF = requestAnimationFrame(loop);\r\n        context.clearRect(0, 0, canvas.width, canvas.height);\r\n\r\n        // draw the playfield\r\n        for (let row = 0; row < 20; row++) {\r\n          for (let col = 0; col < 10; col++) {\r\n            if (playfield[row][col]) {\r\n              const name = playfield[row][col];\r\n              context.fillStyle = colors[name];\r\n\r\n              // drawing 1 px smaller than the grid creates a grid effect\r\n              context.fillRect(col * grid, row * grid, grid - 1, grid - 1);\r\n            }\r\n          }\r\n        }\r\n\r\n        // draw the active tetromino\r\n        if (tetromino) {\r\n          // tetromino falls every 35 frames\r\n          if (++count > 35) {\r\n            tetromino.row++;\r\n            count = 0;\r\n\r\n            // place piece if it runs into anything\r\n            if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {\r\n              tetromino.row--;\r\n              placeTetromino();\r\n            }\r\n          }\r\n\r\n          context.fillStyle = colors[tetromino.name];\r\n\r\n          for (let row = 0; row < tetromino.matrix.length; row++) {\r\n            for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n              if (tetromino.matrix[row][col]) {\r\n                // drawing 1 px smaller than the grid creates a grid effect\r\n                context.fillRect(\r\n                  (tetromino.col + col) * grid,\r\n                  (tetromino.row + row) * grid,\r\n                  grid - 1,\r\n                  grid - 1\r\n                );\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n\r\n      // listen to keyboard events to move the active tetromino\r\n      document.addEventListener(\"keydown\", function(e) {\r\n        if (gameOver) return;\r\n\r\n        // left and right arrow keys (move)\r\n        if (e.which === 37 || e.which === 39) {\r\n          const col = e.which === 37 ? tetromino.col - 1 : tetromino.col + 1;\r\n\r\n          if (isValidMove(tetromino.matrix, tetromino.row, col)) {\r\n            tetromino.col = col;\r\n          }\r\n        }\r\n\r\n        // up arrow key (rotate)\r\n        if (e.which === 38) {\r\n          const matrix = rotate(tetromino.matrix);\r\n          if (isValidMove(matrix, tetromino.row, tetromino.col)) {\r\n            tetromino.matrix = matrix;\r\n          }\r\n        }\r\n\r\n        // down arrow key (drop)\r\n        if (e.which === 40) {\r\n          const row = tetromino.row + 1;\r\n\r\n          if (!isValidMove(tetromino.matrix, row, tetromino.col)) {\r\n            tetromino.row = row - 1;\r\n\r\n            placeTetromino();\r\n            return;\r\n          }\r\n\r\n          tetromino.row = row;\r\n        }\r\n      });\r\n\r\n      // start the game\r\n      rAF = requestAnimationFrame(loop);\r\n    </script>\r\n  </body>\r\n</html>\r\n",
+				"content_base64":                null,
+				"content_disposition":           null,
+				"content_encoding":              null,
+				"content_language":              null,
+				"content_type":                  "text/html",
+				"force_destroy":                 false,
+				"key":                           "index.html",
+				"metadata":                      null,
+				"object_lock_legal_hold_status": null,
+				"object_lock_mode":              null,
+				"object_lock_retain_until_date": null,
+				"source":                        null,
+				"tags":                          null,
+				"website_redirect":              null,
+			},
+			"after_unknown": {
+				"bucket":                 true,
+				"etag":                   true,
+				"id":                     true,
+				"kms_key_id":             true,
+				"server_side_encryption": true,
+				"storage_class":          true,
+				"version_id":             true,
+			},
+			"before": null,
+		},
+		"deposed":        "",
+		"index":          null,
+		"mode":           "managed",
+		"module_address": "",
+		"name":           "demo",
+		"provider_name":  "registry.terraform.io/hashicorp/aws",
+		"type":           "aws_s3_bucket_object",
+	},
+	"random_pet.petname": {
+		"address": "random_pet.petname",
+		"change": {
+			"actions": [
+				"create",
+			],
+			"after": {
+				"keepers":   null,
+				"length":    3,
+				"prefix":    null,
+				"separator": "-",
+			},
+			"after_unknown": {
+				"id": true,
+			},
+			"before": null,
+		},
+		"deposed":        "",
+		"index":          null,
+		"mode":           "managed",
+		"module_address": "",
+		"name":           "petname",
+		"provider_name":  "registry.terraform.io/hashicorp/random",
+		"type":           "random_pet",
+	},
+}
+
+output_changes = {
+	"dev_website_endpoint": {
+		"change": {
+			"actions": [
+				"create",
+			],
+			"after":         undefined,
+			"after_unknown": true,
+			"before":        null,
+		},
+		"name": "dev_website_endpoint",
+	},
+}
+
+raw = {
+	"configuration": {
+		"provider_config": {
+			"aws": {
+				"expressions": {
+					"region": {
+						"references": [
+							"var.region",
+						],
+					},
+				},
+				"name": "aws",
+			},
+		},
+		"root_module": {
+			"outputs": {
+				"dev_website_endpoint": {
+					"expression": {
+						"references": [
+							"aws_s3_bucket.demo",
+						],
+					},
+				},
+			},
+			"resources": [
+				{
+					"address": "aws_s3_bucket.demo",
+					"expressions": {
+						"acl": {
+							"constant_value": "public-read",
+						},
+						"bucket": {
+							"references": [
+								"var.prefix",
+								"random_pet.petname",
+							],
+						},
+						"force_destroy": {
+							"constant_value": true,
+						},
+						"policy": {
+							"references": [
+								"var.prefix",
+								"random_pet.petname",
+							],
+						},
+						"tags": {
+							"constant_value": {
+								"Environment": "Learn",
+								"Name":        "HashiCorp",
+							},
+						},
+						"website": [
+							{
+								"error_document": {
+									"constant_value": "error.html",
+								},
+								"index_document": {
+									"constant_value": "index.html",
+								},
+							},
+						],
+					},
+					"mode":                "managed",
+					"name":                "demo",
+					"provider_config_key": "aws",
+					"schema_version":      0,
+					"type":                "aws_s3_bucket",
+				},
+				{
+					"address": "aws_s3_bucket_object.demo",
+					"expressions": {
+						"acl": {
+							"constant_value": "public-read",
+						},
+						"bucket": {
+							"references": [
+								"aws_s3_bucket.demo",
+							],
+						},
+						"content": {
+							"references": [
+								"path.module",
+							],
+						},
+						"content_type": {
+							"constant_value": "text/html",
+						},
+						"key": {
+							"constant_value": "index.html",
+						},
+					},
+					"mode":                "managed",
+					"name":                "demo",
+					"provider_config_key": "aws",
+					"schema_version":      0,
+					"type":                "aws_s3_bucket_object",
+				},
+				{
+					"address": "random_pet.petname",
+					"expressions": {
+						"length": {
+							"constant_value": 3,
+						},
+						"separator": {
+							"constant_value": "-",
+						},
+					},
+					"mode":                "managed",
+					"name":                "petname",
+					"provider_config_key": "random",
+					"schema_version":      0,
+					"type":                "random_pet",
+				},
+			],
+			"variables": {
+				"prefix": {
+					"description": "This is the environemnt where Terraform deploys your webapp",
+				},
+				"region": {
+					"description": "This is the cloud hosting region where Terraform deploys your webapp",
+				},
+			},
+		},
+	},
+	"format_version": "0.1",
+	"output_changes": {
+		"dev_website_endpoint": {
+			"actions": [
+				"create",
+			],
+			"after_unknown": true,
+			"before":        null,
+		},
+	},
+	"planned_values": {
+		"outputs": {
+			"dev_website_endpoint": {
+				"sensitive": false,
+			},
+		},
+		"root_module": {
+			"resources": [
+				{
+					"address":        "aws_s3_bucket.demo",
+					"mode":           "managed",
+					"name":           "demo",
+					"provider_name":  "registry.terraform.io/hashicorp/aws",
+					"schema_version": 0,
+					"type":           "aws_s3_bucket",
+					"values": {
+						"acl":                                  "public-read",
+						"bucket_prefix":                        null,
+						"cors_rule":                            [],
+						"force_destroy":                        true,
+						"grant":                                [],
+						"lifecycle_rule":                       [],
+						"logging":                              [],
+						"object_lock_configuration":            [],
+						"replication_configuration":            [],
+						"server_side_encryption_configuration": [],
+						"tags": {
+							"Environment": "Learn",
+							"Name":        "HashiCorp",
+						},
+						"website": [
+							{
+								"error_document":           "error.html",
+								"index_document":           "index.html",
+								"redirect_all_requests_to": null,
+								"routing_rules":            null,
+							},
+						],
+					},
+				},
+				{
+					"address":        "aws_s3_bucket_object.demo",
+					"mode":           "managed",
+					"name":           "demo",
+					"provider_name":  "registry.terraform.io/hashicorp/aws",
+					"schema_version": 0,
+					"type":           "aws_s3_bucket_object",
+					"values": {
+						"acl":                           "public-read",
+						"cache_control":                 null,
+						"content":                       "<!DOCTYPE html>\r\n<html>\r\n  <head>\r\n    <title>Terramino</title>\r\n    <style>\r\n      html,\r\n      body {\r\n        height: 100%;\r\n        margin: 0;\r\n      }\r\n\r\n      body {\r\n\r\n        background-image: url(\"https://raw.githubusercontent.com/hashicorp/learn-terraform-circleci/master/assets/background.png\");\r\n        display: flex;\r\n        align-items: center;\r\n        justify-content: center;\r\n      }\r\n\r\n      canvas {\r\n        border: 1px solid white;\r\n      }\r\n    </style>\r\n  </head>\r\n\r\n  <body>\r\n    <canvas width=\"320\" height=\"640\" id=\"game\"></canvas>\r\n    <script>\r\n      // https://tetris.fandom.com/wiki/Tetris_Guideline\r\n\r\n      // get a random integer between the range of [min,max]\r\n      // @see https://stackoverflow.com/a/1527820/2124254\r\n      function getRandomInt(min, max) {\r\n        min = Math.ceil(min);\r\n        max = Math.floor(max);\r\n\r\n        return Math.floor(Math.random() * (max - min + 1)) + min;\r\n      }\r\n\r\n      // generate a new tetromino sequence\r\n      // @see https://tetris.fandom.com/wiki/Random_Generator\r\n      function generateSequence() {\r\n        const sequence = [\"I\", \"J\", \"L\", \"O\", \"S\", \"T\", \"Z\"];\r\n\r\n        while (sequence.length) {\r\n          const rand = getRandomInt(0, sequence.length - 1);\r\n          const name = sequence.splice(rand, 1)[0];\r\n          tetrominoSequence.push(name);\r\n        }\r\n      }\r\n\r\n      // get the next tetromino in the sequence\r\n      function getNextTetromino() {\r\n        if (tetrominoSequence.length === 0) {\r\n          generateSequence();\r\n        }\r\n\r\n        const name = tetrominoSequence.pop();\r\n        const matrix = tetrominos[name];\r\n\r\n        // I and O start centered, all others start in left-middle\r\n        const col = playfield[0].length / 2 - Math.ceil(matrix[0].length / 2);\r\n\r\n        // I starts on row 21 (-1), all others start on row 22 (-2)\r\n        const row = name === \"I\" ? -1 : -2;\r\n\r\n        return {\r\n          name: name, // name of the piece (L, O, etc.)\r\n          matrix: matrix, // the current rotation matrix\r\n          row: row, // current row (starts offscreen)\r\n          col: col // current col\r\n        };\r\n      }\r\n\r\n      // rotate an NxN matrix 90deg\r\n      // @see https://codereview.stackexchange.com/a/186834\r\n      function rotate(matrix) {\r\n        const N = matrix.length - 1;\r\n        const result = matrix.map((row, i) =>\r\n          row.map((val, j) => matrix[N - j][i])\r\n        );\r\n\r\n        return result;\r\n      }\r\n\r\n      // check to see if the new matrix/row/col is valid\r\n      function isValidMove(matrix, cellRow, cellCol) {\r\n        for (let row = 0; row < matrix.length; row++) {\r\n          for (let col = 0; col < matrix[row].length; col++) {\r\n            if (\r\n              matrix[row][col] &&\r\n              // outside the game bounds\r\n              (cellCol + col < 0 ||\r\n                cellCol + col >= playfield[0].length ||\r\n                cellRow + row >= playfield.length ||\r\n                // collides with another piece\r\n                playfield[cellRow + row][cellCol + col])\r\n            ) {\r\n              return false;\r\n            }\r\n          }\r\n        }\r\n\r\n        return true;\r\n      }\r\n\r\n      // place the tetromino on the playfield\r\n      function placeTetromino() {\r\n        for (let row = 0; row < tetromino.matrix.length; row++) {\r\n          for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n            if (tetromino.matrix[row][col]) {\r\n              // game over if piece has any part offscreen\r\n              if (tetromino.row + row < 0) {\r\n                return showGameOver();\r\n              }\r\n\r\n              playfield[tetromino.row + row][tetromino.col + col] =\r\n                tetromino.name;\r\n            }\r\n          }\r\n        }\r\n\r\n        // check for line clears starting from the bottom and working our way up\r\n        for (let row = playfield.length - 1; row >= 0; ) {\r\n          if (playfield[row].every(cell => !!cell)) {\r\n            // drop every row above this one\r\n            for (let r = row; r >= 0; r--) {\r\n              playfield[r] = playfield[r - 1];\r\n            }\r\n          } else {\r\n            row--;\r\n          }\r\n        }\r\n\r\n        tetromino = getNextTetromino();\r\n      }\r\n\r\n      // show the game over screen\r\n      function showGameOver() {\r\n        cancelAnimationFrame(rAF);\r\n        gameOver = true;\r\n\r\n        context.fillStyle = \"black\";\r\n        context.globalAlpha = 0.75;\r\n        context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);\r\n\r\n        context.globalAlpha = 1;\r\n        context.fillStyle = \"white\";\r\n        context.font = \"36px monospace\";\r\n        context.textAlign = \"center\";\r\n        context.textBaseline = \"middle\";\r\n        context.fillText(\"GAME OVER!\", canvas.width / 2, canvas.height / 2);\r\n      }\r\n\r\n      const canvas = document.getElementById(\"game\");\r\n      const context = canvas.getContext(\"2d\");\r\n      const grid = 32;\r\n      const tetrominoSequence = [];\r\n\r\n      // keep track of what is in every cell of the game using a 2d array\r\n      // tetris playfield is 10x20, with a few rows offscreen\r\n      const playfield = [];\r\n\r\n      // populate the empty state\r\n      for (let row = -2; row < 20; row++) {\r\n        playfield[row] = [];\r\n\r\n        for (let col = 0; col < 10; col++) {\r\n          playfield[row][col] = 0;\r\n        }\r\n      }\r\n\r\n      // how to draw each tetromino\r\n      // @see https://tetris.fandom.com/wiki/SRS\r\n      const tetrominos = {\r\n        I: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],\r\n        J: [[1, 0, 0], [1, 1, 1], [0, 0, 0]],\r\n        L: [[0, 0, 1], [1, 1, 1], [0, 0, 0]],\r\n        O: [[1, 1], [1, 1]],\r\n        S: [[0, 1, 1], [1, 1, 0], [0, 0, 0]],\r\n        Z: [[1, 1, 0], [0, 1, 1], [0, 0, 0]],\r\n        T: [[0, 1, 0], [1, 1, 1], [0, 0, 0]]\r\n      };\r\n\r\n      // color of each tetromino\r\n      const colors = {\r\n        I: \"#623CE4\",\r\n        O: \"#7C8797\",\r\n        T: \"#00BC7F\",\r\n        S: \"#CA2171\",\r\n        Z: \"#1563ff\",\r\n        J: \"#00ACFF\",\r\n        L: \"white\"\r\n      };\r\n\r\n      let count = 0;\r\n      let tetromino = getNextTetromino();\r\n      let rAF = null; // keep track of the animation frame so we can cancel it\r\n      let gameOver = false;\r\n\r\n      // game loop\r\n      function loop() {\r\n        rAF = requestAnimationFrame(loop);\r\n        context.clearRect(0, 0, canvas.width, canvas.height);\r\n\r\n        // draw the playfield\r\n        for (let row = 0; row < 20; row++) {\r\n          for (let col = 0; col < 10; col++) {\r\n            if (playfield[row][col]) {\r\n              const name = playfield[row][col];\r\n              context.fillStyle = colors[name];\r\n\r\n              // drawing 1 px smaller than the grid creates a grid effect\r\n              context.fillRect(col * grid, row * grid, grid - 1, grid - 1);\r\n            }\r\n          }\r\n        }\r\n\r\n        // draw the active tetromino\r\n        if (tetromino) {\r\n          // tetromino falls every 35 frames\r\n          if (++count > 35) {\r\n            tetromino.row++;\r\n            count = 0;\r\n\r\n            // place piece if it runs into anything\r\n            if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {\r\n              tetromino.row--;\r\n              placeTetromino();\r\n            }\r\n          }\r\n\r\n          context.fillStyle = colors[tetromino.name];\r\n\r\n          for (let row = 0; row < tetromino.matrix.length; row++) {\r\n            for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n              if (tetromino.matrix[row][col]) {\r\n                // drawing 1 px smaller than the grid creates a grid effect\r\n                context.fillRect(\r\n                  (tetromino.col + col) * grid,\r\n                  (tetromino.row + row) * grid,\r\n                  grid - 1,\r\n                  grid - 1\r\n                );\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n\r\n      // listen to keyboard events to move the active tetromino\r\n      document.addEventListener(\"keydown\", function(e) {\r\n        if (gameOver) return;\r\n\r\n        // left and right arrow keys (move)\r\n        if (e.which === 37 || e.which === 39) {\r\n          const col = e.which === 37 ? tetromino.col - 1 : tetromino.col + 1;\r\n\r\n          if (isValidMove(tetromino.matrix, tetromino.row, col)) {\r\n            tetromino.col = col;\r\n          }\r\n        }\r\n\r\n        // up arrow key (rotate)\r\n        if (e.which === 38) {\r\n          const matrix = rotate(tetromino.matrix);\r\n          if (isValidMove(matrix, tetromino.row, tetromino.col)) {\r\n            tetromino.matrix = matrix;\r\n          }\r\n        }\r\n\r\n        // down arrow key (drop)\r\n        if (e.which === 40) {\r\n          const row = tetromino.row + 1;\r\n\r\n          if (!isValidMove(tetromino.matrix, row, tetromino.col)) {\r\n            tetromino.row = row - 1;\r\n\r\n            placeTetromino();\r\n            return;\r\n          }\r\n\r\n          tetromino.row = row;\r\n        }\r\n      });\r\n\r\n      // start the game\r\n      rAF = requestAnimationFrame(loop);\r\n    </script>\r\n  </body>\r\n</html>\r\n",
+						"content_base64":                null,
+						"content_disposition":           null,
+						"content_encoding":              null,
+						"content_language":              null,
+						"content_type":                  "text/html",
+						"force_destroy":                 false,
+						"key":                           "index.html",
+						"metadata":                      null,
+						"object_lock_legal_hold_status": null,
+						"object_lock_mode":              null,
+						"object_lock_retain_until_date": null,
+						"source":                        null,
+						"tags":                          null,
+						"website_redirect":              null,
+					},
+				},
+				{
+					"address":        "random_pet.petname",
+					"mode":           "managed",
+					"name":           "petname",
+					"provider_name":  "registry.terraform.io/hashicorp/random",
+					"schema_version": 0,
+					"type":           "random_pet",
+					"values": {
+						"keepers":   null,
+						"length":    3,
+						"prefix":    null,
+						"separator": "-",
+					},
+				},
+			],
+		},
+	},
+	"resource_changes": [
+		{
+			"address": "aws_s3_bucket.demo",
+			"change": {
+				"actions": [
+					"create",
+				],
+				"after": {
+					"acl":                                  "public-read",
+					"bucket_prefix":                        null,
+					"cors_rule":                            [],
+					"force_destroy":                        true,
+					"grant":                                [],
+					"lifecycle_rule":                       [],
+					"logging":                              [],
+					"object_lock_configuration":            [],
+					"replication_configuration":            [],
+					"server_side_encryption_configuration": [],
+					"tags": {
+						"Environment": "Learn",
+						"Name":        "HashiCorp",
+					},
+					"website": [
+						{
+							"error_document":           "error.html",
+							"index_document":           "index.html",
+							"redirect_all_requests_to": null,
+							"routing_rules":            null,
+						},
+					],
+				},
+				"after_unknown": {
+					"acceleration_status": true,
+					"arn":                                  true,
+					"bucket":                               true,
+					"bucket_domain_name":                   true,
+					"bucket_regional_domain_name":          true,
+					"cors_rule":                            [],
+					"grant":                                [],
+					"hosted_zone_id":                       true,
+					"id":                                   true,
+					"lifecycle_rule":                       [],
+					"logging":                              [],
+					"object_lock_configuration":            [],
+					"policy":                               true,
+					"region":                               true,
+					"replication_configuration":            [],
+					"request_payer":                        true,
+					"server_side_encryption_configuration": [],
+					"tags":       {},
+					"versioning": true,
+					"website": [
+						{},
+					],
+					"website_domain":   true,
+					"website_endpoint": true,
+				},
+				"before": null,
+			},
+			"mode":          "managed",
+			"name":          "demo",
+			"provider_name": "registry.terraform.io/hashicorp/aws",
+			"type":          "aws_s3_bucket",
+		},
+		{
+			"address": "aws_s3_bucket_object.demo",
+			"change": {
+				"actions": [
+					"create",
+				],
+				"after": {
+					"acl":                           "public-read",
+					"cache_control":                 null,
+					"content":                       "<!DOCTYPE html>\r\n<html>\r\n  <head>\r\n    <title>Terramino</title>\r\n    <style>\r\n      html,\r\n      body {\r\n        height: 100%;\r\n        margin: 0;\r\n      }\r\n\r\n      body {\r\n\r\n        background-image: url(\"https://raw.githubusercontent.com/hashicorp/learn-terraform-circleci/master/assets/background.png\");\r\n        display: flex;\r\n        align-items: center;\r\n        justify-content: center;\r\n      }\r\n\r\n      canvas {\r\n        border: 1px solid white;\r\n      }\r\n    </style>\r\n  </head>\r\n\r\n  <body>\r\n    <canvas width=\"320\" height=\"640\" id=\"game\"></canvas>\r\n    <script>\r\n      // https://tetris.fandom.com/wiki/Tetris_Guideline\r\n\r\n      // get a random integer between the range of [min,max]\r\n      // @see https://stackoverflow.com/a/1527820/2124254\r\n      function getRandomInt(min, max) {\r\n        min = Math.ceil(min);\r\n        max = Math.floor(max);\r\n\r\n        return Math.floor(Math.random() * (max - min + 1)) + min;\r\n      }\r\n\r\n      // generate a new tetromino sequence\r\n      // @see https://tetris.fandom.com/wiki/Random_Generator\r\n      function generateSequence() {\r\n        const sequence = [\"I\", \"J\", \"L\", \"O\", \"S\", \"T\", \"Z\"];\r\n\r\n        while (sequence.length) {\r\n          const rand = getRandomInt(0, sequence.length - 1);\r\n          const name = sequence.splice(rand, 1)[0];\r\n          tetrominoSequence.push(name);\r\n        }\r\n      }\r\n\r\n      // get the next tetromino in the sequence\r\n      function getNextTetromino() {\r\n        if (tetrominoSequence.length === 0) {\r\n          generateSequence();\r\n        }\r\n\r\n        const name = tetrominoSequence.pop();\r\n        const matrix = tetrominos[name];\r\n\r\n        // I and O start centered, all others start in left-middle\r\n        const col = playfield[0].length / 2 - Math.ceil(matrix[0].length / 2);\r\n\r\n        // I starts on row 21 (-1), all others start on row 22 (-2)\r\n        const row = name === \"I\" ? -1 : -2;\r\n\r\n        return {\r\n          name: name, // name of the piece (L, O, etc.)\r\n          matrix: matrix, // the current rotation matrix\r\n          row: row, // current row (starts offscreen)\r\n          col: col // current col\r\n        };\r\n      }\r\n\r\n      // rotate an NxN matrix 90deg\r\n      // @see https://codereview.stackexchange.com/a/186834\r\n      function rotate(matrix) {\r\n        const N = matrix.length - 1;\r\n        const result = matrix.map((row, i) =>\r\n          row.map((val, j) => matrix[N - j][i])\r\n        );\r\n\r\n        return result;\r\n      }\r\n\r\n      // check to see if the new matrix/row/col is valid\r\n      function isValidMove(matrix, cellRow, cellCol) {\r\n        for (let row = 0; row < matrix.length; row++) {\r\n          for (let col = 0; col < matrix[row].length; col++) {\r\n            if (\r\n              matrix[row][col] &&\r\n              // outside the game bounds\r\n              (cellCol + col < 0 ||\r\n                cellCol + col >= playfield[0].length ||\r\n                cellRow + row >= playfield.length ||\r\n                // collides with another piece\r\n                playfield[cellRow + row][cellCol + col])\r\n            ) {\r\n              return false;\r\n            }\r\n          }\r\n        }\r\n\r\n        return true;\r\n      }\r\n\r\n      // place the tetromino on the playfield\r\n      function placeTetromino() {\r\n        for (let row = 0; row < tetromino.matrix.length; row++) {\r\n          for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n            if (tetromino.matrix[row][col]) {\r\n              // game over if piece has any part offscreen\r\n              if (tetromino.row + row < 0) {\r\n                return showGameOver();\r\n              }\r\n\r\n              playfield[tetromino.row + row][tetromino.col + col] =\r\n                tetromino.name;\r\n            }\r\n          }\r\n        }\r\n\r\n        // check for line clears starting from the bottom and working our way up\r\n        for (let row = playfield.length - 1; row >= 0; ) {\r\n          if (playfield[row].every(cell => !!cell)) {\r\n            // drop every row above this one\r\n            for (let r = row; r >= 0; r--) {\r\n              playfield[r] = playfield[r - 1];\r\n            }\r\n          } else {\r\n            row--;\r\n          }\r\n        }\r\n\r\n        tetromino = getNextTetromino();\r\n      }\r\n\r\n      // show the game over screen\r\n      function showGameOver() {\r\n        cancelAnimationFrame(rAF);\r\n        gameOver = true;\r\n\r\n        context.fillStyle = \"black\";\r\n        context.globalAlpha = 0.75;\r\n        context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);\r\n\r\n        context.globalAlpha = 1;\r\n        context.fillStyle = \"white\";\r\n        context.font = \"36px monospace\";\r\n        context.textAlign = \"center\";\r\n        context.textBaseline = \"middle\";\r\n        context.fillText(\"GAME OVER!\", canvas.width / 2, canvas.height / 2);\r\n      }\r\n\r\n      const canvas = document.getElementById(\"game\");\r\n      const context = canvas.getContext(\"2d\");\r\n      const grid = 32;\r\n      const tetrominoSequence = [];\r\n\r\n      // keep track of what is in every cell of the game using a 2d array\r\n      // tetris playfield is 10x20, with a few rows offscreen\r\n      const playfield = [];\r\n\r\n      // populate the empty state\r\n      for (let row = -2; row < 20; row++) {\r\n        playfield[row] = [];\r\n\r\n        for (let col = 0; col < 10; col++) {\r\n          playfield[row][col] = 0;\r\n        }\r\n      }\r\n\r\n      // how to draw each tetromino\r\n      // @see https://tetris.fandom.com/wiki/SRS\r\n      const tetrominos = {\r\n        I: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],\r\n        J: [[1, 0, 0], [1, 1, 1], [0, 0, 0]],\r\n        L: [[0, 0, 1], [1, 1, 1], [0, 0, 0]],\r\n        O: [[1, 1], [1, 1]],\r\n        S: [[0, 1, 1], [1, 1, 0], [0, 0, 0]],\r\n        Z: [[1, 1, 0], [0, 1, 1], [0, 0, 0]],\r\n        T: [[0, 1, 0], [1, 1, 1], [0, 0, 0]]\r\n      };\r\n\r\n      // color of each tetromino\r\n      const colors = {\r\n        I: \"#623CE4\",\r\n        O: \"#7C8797\",\r\n        T: \"#00BC7F\",\r\n        S: \"#CA2171\",\r\n        Z: \"#1563ff\",\r\n        J: \"#00ACFF\",\r\n        L: \"white\"\r\n      };\r\n\r\n      let count = 0;\r\n      let tetromino = getNextTetromino();\r\n      let rAF = null; // keep track of the animation frame so we can cancel it\r\n      let gameOver = false;\r\n\r\n      // game loop\r\n      function loop() {\r\n        rAF = requestAnimationFrame(loop);\r\n        context.clearRect(0, 0, canvas.width, canvas.height);\r\n\r\n        // draw the playfield\r\n        for (let row = 0; row < 20; row++) {\r\n          for (let col = 0; col < 10; col++) {\r\n            if (playfield[row][col]) {\r\n              const name = playfield[row][col];\r\n              context.fillStyle = colors[name];\r\n\r\n              // drawing 1 px smaller than the grid creates a grid effect\r\n              context.fillRect(col * grid, row * grid, grid - 1, grid - 1);\r\n            }\r\n          }\r\n        }\r\n\r\n        // draw the active tetromino\r\n        if (tetromino) {\r\n          // tetromino falls every 35 frames\r\n          if (++count > 35) {\r\n            tetromino.row++;\r\n            count = 0;\r\n\r\n            // place piece if it runs into anything\r\n            if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {\r\n              tetromino.row--;\r\n              placeTetromino();\r\n            }\r\n          }\r\n\r\n          context.fillStyle = colors[tetromino.name];\r\n\r\n          for (let row = 0; row < tetromino.matrix.length; row++) {\r\n            for (let col = 0; col < tetromino.matrix[row].length; col++) {\r\n              if (tetromino.matrix[row][col]) {\r\n                // drawing 1 px smaller than the grid creates a grid effect\r\n                context.fillRect(\r\n                  (tetromino.col + col) * grid,\r\n                  (tetromino.row + row) * grid,\r\n                  grid - 1,\r\n                  grid - 1\r\n                );\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n\r\n      // listen to keyboard events to move the active tetromino\r\n      document.addEventListener(\"keydown\", function(e) {\r\n        if (gameOver) return;\r\n\r\n        // left and right arrow keys (move)\r\n        if (e.which === 37 || e.which === 39) {\r\n          const col = e.which === 37 ? tetromino.col - 1 : tetromino.col + 1;\r\n\r\n          if (isValidMove(tetromino.matrix, tetromino.row, col)) {\r\n            tetromino.col = col;\r\n          }\r\n        }\r\n\r\n        // up arrow key (rotate)\r\n        if (e.which === 38) {\r\n          const matrix = rotate(tetromino.matrix);\r\n          if (isValidMove(matrix, tetromino.row, tetromino.col)) {\r\n            tetromino.matrix = matrix;\r\n          }\r\n        }\r\n\r\n        // down arrow key (drop)\r\n        if (e.which === 40) {\r\n          const row = tetromino.row + 1;\r\n\r\n          if (!isValidMove(tetromino.matrix, row, tetromino.col)) {\r\n            tetromino.row = row - 1;\r\n\r\n            placeTetromino();\r\n            return;\r\n          }\r\n\r\n          tetromino.row = row;\r\n        }\r\n      });\r\n\r\n      // start the game\r\n      rAF = requestAnimationFrame(loop);\r\n    </script>\r\n  </body>\r\n</html>\r\n",
+					"content_base64":                null,
+					"content_disposition":           null,
+					"content_encoding":              null,
+					"content_language":              null,
+					"content_type":                  "text/html",
+					"force_destroy":                 false,
+					"key":                           "index.html",
+					"metadata":                      null,
+					"object_lock_legal_hold_status": null,
+					"object_lock_mode":              null,
+					"object_lock_retain_until_date": null,
+					"source":                        null,
+					"tags":                          null,
+					"website_redirect":              null,
+				},
+				"after_unknown": {
+					"bucket":                 true,
+					"etag":                   true,
+					"id":                     true,
+					"kms_key_id":             true,
+					"server_side_encryption": true,
+					"storage_class":          true,
+					"version_id":             true,
+				},
+				"before": null,
+			},
+			"mode":          "managed",
+			"name":          "demo",
+			"provider_name": "registry.terraform.io/hashicorp/aws",
+			"type":          "aws_s3_bucket_object",
+		},
+		{
+			"address": "random_pet.petname",
+			"change": {
+				"actions": [
+					"create",
+				],
+				"after": {
+					"keepers":   null,
+					"length":    3,
+					"prefix":    null,
+					"separator": "-",
+				},
+				"after_unknown": {
+					"id": true,
+				},
+				"before": null,
+			},
+			"mode":          "managed",
+			"name":          "petname",
+			"provider_name": "registry.terraform.io/hashicorp/random",
+			"type":          "random_pet",
+		},
+	],
+	"terraform_version": "0.14.2",
+	"variables": {
+		"prefix": {
+			"value": "demo",
+		},
+		"region": {
+			"value": "us-east-1",
+		},
+	},
+}
